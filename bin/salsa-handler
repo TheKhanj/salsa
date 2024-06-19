@@ -40,4 +40,4 @@ done
 host="$(get_host "$proxy")"
 port="$(get_port "$proxy")"
 
-socat STDIO TCP:$host:$port
+exec socat STDIO TCP:$host:$port
