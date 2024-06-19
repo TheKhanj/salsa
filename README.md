@@ -1,18 +1,19 @@
-# salsa
+<div>
+    <p align="center"><img src="./assets/salsa.png" alt="Salsa Logo" width="100"/></p>
+    <p align="center"><b>Salsa</b> - TCP Load Balancer Proxy with Health Checks</p>
+</div>
 
-**TCP Load Balancer Proxy with Health Checks**
-
-## Overview
+# Overview
 
 `salsa` is a versatile tool for creating a TCP load balancer proxy with integrated health checks for underlying proxies. It listens on a specified address and distributes TCP requests to healthy proxies using a round-robin algorithm.
 
-## Features
+# Features
 
 - **Load Balancing**: Distributes incoming TCP requests across multiple proxies.
 - **Health Checks**: Ensures only healthy proxies receive requests based on configurable health checks.
 - **Customization**: Supports customizable health check intervals and commands.
 
-## Installation
+# Installation
 
 1. **Download**:
    Clone the repository from GitHub:
@@ -28,9 +29,9 @@
    sudo make install
    ```
 
-## Usage
+# Usage
 
-### Command-Line Options
+## Command-Line Options
 
 ```
 salsa [OPTIONS...] -l <listening-address> [<proxy-address>...]
@@ -38,13 +39,13 @@ salsa [OPTIONS...] -l <listening-address> [<proxy-address>...]
 
 - **`-l <listening-address>`**: Specifies the address on which the proxy listens.
 
-#### Options
+### Options
 
 - **`-t <time>`**: Interval between health checks (default: 5 seconds).
 - **`-c <check-proxy>`**: Custom command to check proxy health.
 - **`-h, --help`**: Display help message and exit.
 
-#### Examples
+### Examples
 
 - Start `salsa` with default settings:
   ```
@@ -61,6 +62,6 @@ salsa [OPTIONS...] -l <listening-address> [<proxy-address>...]
   salsa -c 'test 1 -eq 1' -l 127.0.0.1:8080 192.168.1.1:9090 192.168.1.2:9090
   ```
 
-## Reporting Issues
+# Reporting Issues
 
 For bug reports or feature requests, please visit our [GitHub Issues Page](https://github.com/thekhanj/salsa/issues).
