@@ -30,10 +30,10 @@ $(BUILD_DIR)/%.o: src/%.c $(BUILD_DIR)
 
 install: install-man install-bin
 
-install-bin:
+install-bin: all
 	install -m 755 $(BIN_FILES) $(BIN_DIR)
 
-install-man: $(MAN_GZ_FILES)
+install-man: $(MAN_GZ_FILES) all
 	install -d $(MAN_DIR)/man$(SECTION)
 	install -m 644 $(MAN_GZ_FILES) $(MAN_DIR)/man$(SECTION)
 
