@@ -142,7 +142,10 @@ printf "forwarding requests to proxies %s\n" "${PROXIES_ADDRESS[@]}"
 command="salsa-handler '$PROC_DIR' '${PROXIES_ADDRESS[@]}'"
 
 check_proxies &
+CHECK_PROXIES_PID=$!
+
 socat TCP-LISTEN:$listening_port,bind=$listening_host,fork,reuseaddr \
 	EXEC:"$command" >/dev/null 2>&1
 
+kill -9 $CHECK_PROXIES_PID
 rm -rf $PROC_DIR
