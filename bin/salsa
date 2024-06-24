@@ -145,7 +145,14 @@ check_proxies &
 CHECK_PROXIES_PID=$!
 
 socat TCP-LISTEN:$listening_port,bind=$listening_host,fork,reuseaddr,forever \
-	EXEC:"$command"
+	EXEC:"$command" &
+TCP_LISTENER_PID=$!
+
+socat UDP-LISTEN:$listening_port,bind=$listening_host,fork,reuseaddr,forever \
+	EXEC:"$command" &
+UDP_LISTENER_PID=$!
+
+wait $TCP_LISTENER_PID $UDP_LISTENER_PID
 
 kill -9 $CHECK_PROXIES_PID
 rm -rf $PROC_DIR
