@@ -30,8 +30,7 @@ int get_new_proxy(const char *proc_dir) {
 }
 
 char *get_host(char *proxy) {
-	char *colon = strstr(proxy, ":");
-	if (colon == NULL)
+	char *colon = strstr(proxy, ":"); if (colon == NULL)
 		return strdup("0.0.0.0");
 	int n = colon - proxy;
 	char *ret = malloc(sizeof(char) * (n + 1));

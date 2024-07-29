@@ -1,0 +1,32 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-DLIB_DIR=\"/usr/local/lib/salsa\"",
+      "-DMAX_BACKENDS=256",
+      "-DMAX_STR_LEN=1024",
+      "-c",
+      "-o",
+      "build/salsa.o",
+      "src/salsa.c"
+    ],
+    "directory": "/home/khanj/git/@thekhanj/salsa",
+    "file": "/home/khanj/git/@thekhanj/salsa/src/salsa.c",
+    "output": "/home/khanj/git/@thekhanj/salsa/build/salsa.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-DLIB_DIR=\"/usr/local/lib/salsa\"",
+      "-DMAX_BACKENDS=256",
+      "-DMAX_STR_LEN=1024",
+      "-c",
+      "-o",
+      "build/salsa_handler.o",
+      "src/salsa_handler.c"
+    ],
+    "directory": "/home/khanj/git/@thekhanj/salsa",
+    "file": "/home/khanj/git/@thekhanj/salsa/src/salsa_handler.c",
+    "output": "/home/khanj/git/@thekhanj/salsa/build/salsa_handler.o"
+  }
+]

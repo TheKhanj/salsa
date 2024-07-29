@@ -1,0 +1,5 @@
+// salsa -l|--listen <listening-address> -c 'test 1 -eq 1' -t [interval]
+// [<proxy-address>...] salsa -l :3000 -a round-robin --round-robin-weights
+// 1,2,3,4 [<proxy-address>...] salsa -l :3000 -a score --score-command 'exit
+// code of command' salsa --help|-h
+
