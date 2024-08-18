@@ -15,8 +15,17 @@ const (
 	DEFAULT_LISTEN string = "0.0.0.0:5743"
 )
 
-func showHelp() {
+func showHelpMessage() {
+	fmt.Println("NAME")
+	fmt.Println("  salsa - TCP load balancer")
+	fmt.Println()
+	fmt.Println("SYNOPSIS")
+	fmt.Println("  salsa [-l <listening-address>] <backends...>")
+	fmt.Println()
+	fmt.Println("OPTIONS")
 	flag.PrintDefaults()
+	fmt.Println("EXAMPLES")
+	fmt.Println("  salsa -l :4000 127.0.0.1:3000 127.0.0.1:3001 127.0.0.1:3002")
 }
 
 func showManPage() {
@@ -91,7 +100,7 @@ func main() {
 	}
 
 	if *help == true {
-		showHelp()
+		showHelpMessage()
 		return
 	}
 
