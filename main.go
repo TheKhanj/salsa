@@ -16,7 +16,7 @@ const (
 	DEFAULT_LISTEN string = "0.0.0.0:5743"
 )
 
-func showHelpMessage() {
+func showHelpMessage() int {
 	fmt.Println("NAME")
 	fmt.Println("  salsa - TCP load balancer")
 	fmt.Println()
@@ -27,9 +27,11 @@ func showHelpMessage() {
 	flag.PrintDefaults()
 	fmt.Println("EXAMPLES")
 	fmt.Println("  salsa -l :4000 127.0.0.1:3000 127.0.0.1:3001 127.0.0.1:3002")
+
+	return 0
 }
 
-func showManPage() {
+func showManPage() int {
 	cmd := exec.Command("man", "salsa")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -37,7 +39,9 @@ func showManPage() {
 	err := cmd.Run()
 	if err != nil {
 		fmt.Printf("error opening man page: %s\n", err.Error())
+		return 1
 	}
+	return 0
 }
 
 func getBackends(backends []string) []Backend {
@@ -85,7 +89,7 @@ func cleanup(l *TCPListener) {
 	os.Exit(0)
 }
 
-func main() {
+func run() int {
 	if uid := syscall.Getuid(); uid == 0 {
 		PROC_DIR = fmt.Sprintf("/var/run/salsa/%d", os.Getpid())
 	} else {
@@ -103,13 +107,11 @@ func main() {
 	backends := flag.Args()
 
 	if *manPage == true {
-		showManPage()
-		return
+		return showManPage()
 	}
 
 	if *help == true {
-		showHelpMessage()
-		return
+		return showHelpMessage()
 	}
 
 	listener := NewTCPListener(
@@ -122,15 +124,26 @@ func main() {
 	err := initProcDir(&listener)
 	if err != nil {
 		log.Println(err)
-		return
+		return 2
 	}
 
+	tcpServerStopped := make(chan struct{})
 	go func() {
-		listener.Listen()
+		err := listener.Listen()
 		if err != nil {
 			log.Println(err.Error())
 		}
+		close(tcpServerStopped)
 	}()
 
-	<-sigs
+	select {
+	case <-sigs:
+		return 0
+	case <-tcpServerStopped:
+		return 3
+	}
+}
+
+func main() {
+	os.Exit(run())
 }
