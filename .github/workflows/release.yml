@@ -1,0 +1,54 @@
+name: Build and Release Salsa
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    name: Build Salsa
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20' # or the Go version you need
+
+    - name: Install dependencies
+      run: go mod tidy
+
+    - name: Build project with Make
+      run: make
+
+    - name: Create release tarball
+      run: tar -czvf salsa.tar.gz -C build salsa salsa.1.gz
+
+    - name: Upload tarball as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: salsa-release
+        path: salsa.tar.gz
+
+  release:
+    name: Release Salsa
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: salsa-release
+
+    - name: Create GitHub Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: salsa.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
