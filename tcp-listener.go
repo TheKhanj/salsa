@@ -7,13 +7,11 @@ import (
 	"log"
 	"net"
 	"sync"
-	"time"
 )
 
 type TCPListener struct {
 	Address  string
 	Backends []Backend
-	Interval time.Duration
 
 	currentBackendIndex      int
 	currentBackendRepetition int64
@@ -24,13 +22,10 @@ type TCPListener struct {
 	upBackendsCount int
 }
 
-func NewTCPListener(
-	address string, backends []Backend, interval time.Duration,
-) TCPListener {
+func NewTCPListener(address string, backends []Backend) TCPListener {
 	return TCPListener{
 		Address:  address,
 		Backends: backends,
-		Interval: interval,
 
 		currentBackendIndex:      0,
 		currentBackendRepetition: 0,

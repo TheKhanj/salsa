@@ -7,14 +7,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
 var PROC_DIR string
 
 const (
-	DEFAULT_INTERVAL int64  = 5
-	DEFAULT_LISTEN   string = "0.0.0.0:5743"
+	DEFAULT_LISTEN string = "0.0.0.0:5743"
 )
 
 func showHelp() {
@@ -81,7 +79,6 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	listen := flag.String("l", DEFAULT_LISTEN, "listening address")
-	interval := flag.Int64("t", DEFAULT_INTERVAL, "backend check interval in seconds")
 	help := flag.Bool("h", false, "show help message")
 	manPage := flag.Bool("help", false, "show man page")
 
@@ -101,7 +98,6 @@ func main() {
 	listener := NewTCPListener(
 		*listen,
 		getBackends(backends),
-		(time.Duration)(*interval)*time.Second,
 	)
 
 	defer cleanup(&listener)
