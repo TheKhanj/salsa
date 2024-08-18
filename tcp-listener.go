@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -17,8 +18,10 @@ type TCPListener struct {
 	currentBackendIndex      int
 	currentBackendRepetition int64
 
-	shutdown            chan struct{}
-	anyBackendAvailable bool
+	shutdown chan struct{}
+
+	upMutex         sync.RWMutex
+	upBackendsCount int
 }
 
 func NewTCPListener(
@@ -32,8 +35,10 @@ func NewTCPListener(
 		currentBackendIndex:      0,
 		currentBackendRepetition: 0,
 
-		shutdown:            make(chan struct{}),
-		anyBackendAvailable: false,
+		shutdown: make(chan struct{}),
+
+		upMutex:         sync.RWMutex{},
+		upBackendsCount: len(backends),
 	}
 }
 
@@ -52,7 +57,7 @@ func handleConnection(clientConn net.Conn, targetAddr string) {
 }
 
 func (l *TCPListener) getBackend() *Backend {
-	if l.anyBackendAvailable == false {
+	if l.isUp() == false {
 		return nil
 	}
 
@@ -68,27 +73,56 @@ func (l *TCPListener) getBackend() *Backend {
 	return &l.Backends[l.currentBackendIndex]
 }
 
+func (l *TCPListener) updateBackend(b *Backend) error {
+	prevUp := b.GetScore() != 0
+
+	err := b.UpdateScore()
+	if err != nil {
+		return err
+	}
+
+	currUp := b.GetScore() != 0
+
+	l.upMutex.Lock()
+	defer l.upMutex.Unlock()
+
+	if prevUp && !currUp {
+		l.upBackendsCount--
+	}
+	if !prevUp && currUp {
+		l.upBackendsCount++
+	}
+
+	return nil
+}
+
+func (l *TCPListener) isUp() bool {
+	l.upMutex.RLock()
+	defer l.upMutex.RUnlock()
+	return l.upBackendsCount != 0
+}
+
 func (l *TCPListener) updateBackends() error {
-	anyAvailable := false
+	prevUp := l.isUp()
+
 	for i := range l.Backends {
 		backend := &l.Backends[i]
-		err := backend.UpdateScore()
+		err := l.updateBackend(backend)
 		if err != nil {
 			return errors.New(
 				fmt.Sprintf("backend %s: %s\n", backend.Address, err.Error()),
 			)
 		}
-
-		anyAvailable = anyAvailable || backend.GetScore() != 0
 	}
 
-	if l.anyBackendAvailable && !anyAvailable {
+	currUp := l.isUp()
+
+	if prevUp && !currUp {
 		log.Println("all backends are offline")
 	}
-	if !l.anyBackendAvailable && anyAvailable {
+	if !prevUp && currUp {
 		log.Println("backends are online again")
 	}
-	l.anyBackendAvailable = anyAvailable
 
 	time.Sleep(l.Interval)
 	return nil

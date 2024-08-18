@@ -54,7 +54,7 @@ func initProcDir(l *TCPListener) error {
 		err = os.WriteFile(
 			backend.dir+"/score",
 			([]byte)(fmt.Sprintf("%d\n", backend.GetScore())),
-			0755,
+			0644,
 		)
 		if err != nil {
 			return err
