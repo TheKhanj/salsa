@@ -14,6 +14,9 @@ type TCPListener struct {
 	Backends []Backend
 	Interval time.Duration
 
+	currentBackendIndex      int
+	currentBackendRepetition int64
+
 	shutdown            chan struct{}
 	anyBackendAvailable bool
 }
@@ -25,6 +28,9 @@ func NewTCPListener(
 		Address:  address,
 		Backends: backends,
 		Interval: interval,
+
+		currentBackendIndex:      0,
+		currentBackendRepetition: 0,
 
 		shutdown:            make(chan struct{}),
 		anyBackendAvailable: false,
@@ -46,21 +52,26 @@ func handleConnection(clientConn net.Conn, targetAddr string) {
 }
 
 func (l *TCPListener) getBackend() *Backend {
-	var candidate *Backend = nil
-
-	for _, backend := range l.Backends {
-		if backend.Score != 0 &&
-			(candidate == nil || candidate.Score > backend.Score) {
-			candidate = &backend
-		}
+	if l.anyBackendAvailable == false {
+		return nil
 	}
 
-	return candidate
+	for l.currentBackendRepetition >=
+		l.Backends[l.currentBackendIndex].GetScore() {
+		l.currentBackendIndex++
+		l.currentBackendIndex %= len(l.Backends)
+		l.currentBackendRepetition = 0
+	}
+
+	l.currentBackendRepetition++
+
+	return &l.Backends[l.currentBackendIndex]
 }
 
 func (l *TCPListener) updateBackends() error {
 	anyAvailable := false
-	for _, backend := range l.Backends {
+	for i := range l.Backends {
+		backend := &l.Backends[i]
 		err := backend.UpdateScore()
 		if err != nil {
 			return errors.New(
@@ -68,7 +79,7 @@ func (l *TCPListener) updateBackends() error {
 			)
 		}
 
-		anyAvailable = anyAvailable || backend.Score != 0
+		anyAvailable = anyAvailable || backend.GetScore() != 0
 	}
 
 	if l.anyBackendAvailable && !anyAvailable {
@@ -87,15 +98,18 @@ func (l *TCPListener) Listen() error {
 	if len(l.Backends) == 0 {
 		return errors.New("no backend provided")
 	}
+
 	listener, err := net.Listen("tcp", l.Address)
 	if err != nil {
 		return err
 	}
+
 	defer listener.Close()
 
 	log.Printf("listening on address %s\n", l.Address)
 	forwardingMsg := "forwarding requests to following backends: "
-	for index, b := range l.Backends {
+	for index := range l.Backends {
+		b := &l.Backends[index]
 		forwardingMsg += b.Address
 		if index != len(l.Backends)-1 {
 			forwardingMsg += ", "

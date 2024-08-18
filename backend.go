@@ -4,23 +4,36 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log"
 	"os"
+	"sync"
 )
 
 type Backend struct {
 	Address string
-	Score   int64
 
-	dir string
+	score int64
+
+	dir   string
+	mutex sync.RWMutex
 }
 
 func NewBackend(address string, path string) Backend {
 	return Backend{
 		Address: address,
-		Score:   1,
 
-		dir: path,
+		score: 1,
+
+		dir:   path,
+		mutex: sync.RWMutex{},
 	}
+}
+
+func (b *Backend) GetScore() int64 {
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
+
+	return b.score
 }
 
 func (b *Backend) UpdateScore() error {
@@ -34,7 +47,16 @@ func (b *Backend) UpdateScore() error {
 	var score int64
 	fmt.Fscanf(bytes.NewReader(buffer), "%d", &score)
 
-	b.Score = score
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	if b.score != score {
+		log.Printf(
+			"backend %s score updated (%d -> %d)", b.Address, b.score, score,
+		)
+	}
+
+	b.score = score
 
 	return nil
 }
