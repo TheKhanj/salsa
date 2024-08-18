@@ -17,7 +17,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.20' # or the Go version you need
+        go-version: '1.23'
 
     - name: Install dependencies
       run: go mod tidy
@@ -47,8 +47,6 @@ jobs:
 
     - name: Create GitHub Release
       id: create_release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: salsa.tar.gz
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
