@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 )
@@ -29,7 +30,14 @@ func showHelpMessage() {
 }
 
 func showManPage() {
-	// TODO: implement
+	cmd := exec.Command("man", "salsa")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Run()
+	if err != nil {
+		fmt.Printf("error opening man page: %s\n", err.Error())
+	}
 }
 
 func getBackends(backends []string) []Backend {
