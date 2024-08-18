@@ -26,7 +26,7 @@ $(BUILD_DIR)/%.gz: doc/%.roff $(BUILD_DIR)
 install: install-doc install-bin
 
 install-bin: all
-	install -m 755 bin/salsa $(BIN_DIR)
+	install -m 755 build/salsa $(BIN_DIR)
 
 install-doc: $(MAN_GZ_FILES) all
 	install -d $(MAN_DIR)/man$(SECTION)
