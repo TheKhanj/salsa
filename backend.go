@@ -7,10 +7,13 @@ import (
 	"log"
 	"os"
 	"sync"
+
+	"github.com/fsnotify/fsnotify"
 )
 
 type Backend struct {
-	Address string
+	Address     string
+	ScoreUpdate chan struct{}
 
 	score int64
 
@@ -20,12 +23,47 @@ type Backend struct {
 
 func NewBackend(address string, path string) Backend {
 	return Backend{
-		Address: address,
+		Address:     address,
+		ScoreUpdate: make(chan struct{}),
 
 		score: 1,
 
 		dir:   path,
 		mutex: sync.RWMutex{},
+	}
+}
+
+func (b *Backend) StopWatchingFilesystem() {
+	close(b.ScoreUpdate)
+}
+
+func (b *Backend) WatchFilesystem() error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+	defer watcher.Close()
+
+	err = watcher.Add(b.dir + "/score")
+	if err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case <-b.ScoreUpdate:
+			return nil
+		case _, ok := <-watcher.Events:
+			if !ok {
+				return nil
+			}
+			b.ScoreUpdate <- struct{}{}
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return nil
+			}
+			log.Println(err)
+		}
 	}
 }
 

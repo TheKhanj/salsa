@@ -102,30 +102,48 @@ func (l *TCPListener) isUp() bool {
 	return l.upBackendsCount != 0
 }
 
-func (l *TCPListener) updateBackends() error {
-	prevUp := l.isUp()
-
+func (l *TCPListener) stopWatchingBackends() {
 	for i := range l.Backends {
 		backend := &l.Backends[i]
-		err := l.updateBackend(backend)
-		if err != nil {
-			return errors.New(
-				fmt.Sprintf("backend %s: %s\n", backend.Address, err.Error()),
-			)
-		}
+		backend.StopWatchingFilesystem()
 	}
+}
 
-	currUp := l.isUp()
+func (l *TCPListener) watchBackends() {
+	for i := range l.Backends {
+		backend := &l.Backends[i]
 
-	if prevUp && !currUp {
-		log.Println("all backends are offline")
+		go backend.WatchFilesystem()
+
+		go func() {
+			for {
+				select {
+				case _, ok := <-backend.ScoreUpdate:
+					if !ok {
+						return
+					}
+
+					prevUp := l.isUp()
+					err := l.updateBackend(backend)
+					if err != nil {
+						log.Print(
+							fmt.Sprintf("backend %s: %s\n", backend.Address, err.Error()),
+						)
+						continue
+					}
+
+					currUp := l.isUp()
+
+					if prevUp && !currUp {
+						log.Println("all backends are offline")
+					}
+					if !prevUp && currUp {
+						log.Println("backends are online again")
+					}
+				}
+			}
+		}()
 	}
-	if !prevUp && currUp {
-		log.Println("backends are online again")
-	}
-
-	time.Sleep(l.Interval)
-	return nil
 }
 
 func (l *TCPListener) Listen() error {
@@ -151,20 +169,8 @@ func (l *TCPListener) Listen() error {
 	}
 	log.Println(forwardingMsg)
 
-	err = l.updateBackends()
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		for {
-			time.Sleep(l.Interval)
-			err := l.updateBackends()
-			if err != nil {
-				log.Printf("error updating backends: %s\n", err.Error())
-			}
-		}
-	}()
+	l.watchBackends()
+	defer l.stopWatchingBackends()
 
 	for {
 		select {
