@@ -1,0 +1,75 @@
+.TH SALSA 1 "August 2024" "v1.0" "TCP Load Balancer"
+.SH NAME
+salsa \- TCP load balancer
+
+.SH SYNOPSIS
+.B salsa
+[\-l <listening\-address>] <backends...>
+
+.SH DESCRIPTION
+.B salsa
+is a TCP load balancer that distributes incoming requests to multiple backend servers using a weighted round-robin algorithm. The load balancer can dynamically adjust the distribution of requests based on scores assigned to each backend.
+
+.SH OPTIONS
+.TP
+.B \-h
+Show help message.
+
+.TP
+.B \-help
+Show this man page.
+
+.TP
+.B \-l string
+Specify the listening address. The default is "0.0.0.0:5743".
+
+.SH BACKENDS
+.B salsa
+requires at least one backend address to be specified. The program balances the requests among the provided backends.
+
+.SH WEIGHTED ROUND ROBIN
+The load balancer uses a weighted round-robin algorithm to distribute requests. Each backend can have a score that influences the number of requests it handles. The scores are stored in files located at:
+
+.TP
+If run as root:
+.I /var/run/salsa/${PID}/backends/{backend_address}/score
+
+.TP
+If run as non-root:
+.I /run/user/${USER_ID}/salsa/${PID}/backends/{backend_address}/score
+
+Initially, all backend scores are set to 1. If a backend's score is increased, it will handle more requests. Conversely, if a backend's score is set to 0, it will receive no requests until the score is increased again.
+
+.B salsa
+watches these score files and adjusts the request distribution in real-time based on any changes.
+
+.SH EXAMPLES
+.TP
+Start the load balancer with the default listening address and distribute requests among three backends:
+.EX
+salsa 127.0.0.1:3000 127.0.0.1:3001 127.0.0.1:3002
+.EE
+
+.TP
+Start the load balancer on port 4000 and distribute requests among three backends:
+.EX
+salsa \-l :4000 127.0.0.1:3000 127.0.0.1:3001 127.0.0.1:3002
+.EE
+
+.SH FILES
+.TP
+.I /var/run/salsa/{PID}/backends/{BACKEND_ADDRESS}/score
+Score files used by the load balancer when running as root.
+
+.TP
+.I /run/user/{USER_ID}/salsa/{PID}/backends/{BACKEND_ADDRESS}/score
+Score files used by the load balancer when running as a non-root user.
+
+.SH SEE ALSO
+.BR tcp(7)
+
+.SH AUTHOR
+Written by the salsa development team.
+
+.SH BUGS
+No known bugs. Please report any issues to the salsa project maintainers.
