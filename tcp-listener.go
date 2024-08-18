@@ -27,7 +27,7 @@ func NewTCPListener(
 		Interval: interval,
 
 		shutdown:            make(chan struct{}),
-		anyBackendAvailable: true,
+		anyBackendAvailable: false,
 	}
 }
 
@@ -49,8 +49,8 @@ func (l *TCPListener) getBackend() *Backend {
 	var candidate *Backend = nil
 
 	for _, backend := range l.Backends {
-		if backend.Weight != 0 &&
-			(candidate == nil || candidate.Weight > backend.Weight) {
+		if backend.Score != 0 &&
+			(candidate == nil || candidate.Score > backend.Score) {
 			candidate = &backend
 		}
 	}
@@ -61,14 +61,14 @@ func (l *TCPListener) getBackend() *Backend {
 func (l *TCPListener) updateBackends() error {
 	anyAvailable := false
 	for _, backend := range l.Backends {
-		err := backend.Update()
+		err := backend.UpdateScore()
 		if err != nil {
 			return errors.New(
 				fmt.Sprintf("backend %s: %s\n", backend.Address, err.Error()),
 			)
 		}
 
-		anyAvailable = anyAvailable || backend.Weight != 0
+		anyAvailable = anyAvailable || backend.Score != 0
 	}
 
 	if l.anyBackendAvailable && !anyAvailable {

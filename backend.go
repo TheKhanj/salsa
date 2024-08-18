@@ -9,32 +9,32 @@ import (
 
 type Backend struct {
 	Address string
-	Weight  int64
+	Score   int64
 
-	filePath string
+	dir string
 }
 
 func NewBackend(address string, path string) Backend {
 	return Backend{
 		Address: address,
-		Weight:  0,
+		Score:   1,
 
-		filePath: path,
+		dir: path,
 	}
 }
 
-func (b *Backend) Update() error {
-	buffer, err := os.ReadFile(b.filePath)
+func (b *Backend) UpdateScore() error {
+	buffer, err := os.ReadFile(b.dir + "/score")
 	if err != nil {
 		return errors.New(
 			fmt.Sprintf("error opening backend file: %s\n", err.Error()),
 		)
 	}
 
-	var weight int64
-	fmt.Fscanf(bytes.NewReader(buffer), "%d", &weight)
+	var score int64
+	fmt.Fscanf(bytes.NewReader(buffer), "%d", &score)
 
-	b.Weight = weight
+	b.Score = score
 
 	return nil
 }

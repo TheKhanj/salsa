@@ -49,9 +49,10 @@ func initProcDir(l *TCPListener) error {
 	}
 
 	for _, backend := range l.Backends {
+		os.Mkdir(backend.dir, 0755)
 		err = os.WriteFile(
-			backend.filePath,
-			([]byte)(fmt.Sprintf("%d", backend.Weight)),
+			backend.dir+"/score",
+			([]byte)(fmt.Sprintf("%d\n", backend.Score)),
 			0755,
 		)
 		if err != nil {
