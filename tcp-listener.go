@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 )
 
 type TCPListener struct {
@@ -37,18 +38,64 @@ func NewTCPListener(address string, backends []Backend) TCPListener {
 	}
 }
 
-func handleConnection(clientConn net.Conn, targetAddr string) {
-	defer clientConn.Close()
+func proxyWithTimeout(dst, src net.Conn, timeout time.Duration) error {
+	buf := make([]byte, 32*1024)
+	for {
+		_ = src.SetReadDeadline(time.Now().Add(timeout))
+		n, readErr := src.Read(buf)
+		if n > 0 {
+			_ = dst.SetWriteDeadline(time.Now().Add(timeout))
+			if _, writeErr := dst.Write(buf[:n]); writeErr != nil {
+				return writeErr
+			}
+		}
+		if readErr != nil {
+			if readErr != io.EOF {
+				return readErr
+			}
+			return nil
+		}
+	}
+}
 
-	targetConn, err := net.Dial("tcp", targetAddr)
+func handleConnection(
+	src net.Conn, targetAddr string, timeout time.Duration,
+) {
+	defer src.Close()
+
+	dst, err := net.Dial("tcp", targetAddr)
 	if err != nil {
 		log.Printf("error connecting to target server: %v\n", err)
 		return
 	}
-	defer targetConn.Close()
+	defer dst.Close()
 
-	go io.Copy(targetConn, clientConn)
-	io.Copy(clientConn, targetConn)
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		err := proxyWithTimeout(dst, src, timeout)
+		if err != nil {
+			log.Printf(
+				"error: backend %s: failed writing to dst: %s", targetAddr, err,
+			)
+		}
+		_ = dst.(*net.TCPConn).CloseWrite()
+	}()
+
+	go func() {
+		defer wg.Done()
+		err := proxyWithTimeout(src, dst, timeout)
+		if err != nil {
+			log.Printf(
+				"error: backend %s: failed writing to src: %s", targetAddr, err,
+			)
+		}
+		_ = src.(*net.TCPConn).CloseWrite()
+	}()
+
+	wg.Wait()
 }
 
 func (l *TCPListener) getBackend() *Backend {
@@ -150,7 +197,6 @@ func (l *TCPListener) Listen() error {
 	if err != nil {
 		return err
 	}
-
 	defer listener.Close()
 
 	log.Printf("listening on address %s\n", l.Address)
@@ -185,7 +231,7 @@ func (l *TCPListener) Listen() error {
 				continue
 			}
 
-			go handleConnection(clientConn, backend.Address)
+			go handleConnection(clientConn, backend.Address, time.Second*5)
 		}
 	}
 }
