@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"sync"
-	"time"
 )
 
 type TCPListener struct {
@@ -38,13 +37,11 @@ func NewTCPListener(address string, backends []Backend) TCPListener {
 	}
 }
 
-func proxyWithTimeout(dst, src net.Conn, timeout time.Duration) error {
+func proxy(dst, src net.Conn) error {
 	buf := make([]byte, 32*1024)
 	for {
-		_ = src.SetReadDeadline(time.Now().Add(timeout))
 		n, readErr := src.Read(buf)
 		if n > 0 {
-			_ = dst.SetWriteDeadline(time.Now().Add(timeout))
 			if _, writeErr := dst.Write(buf[:n]); writeErr != nil {
 				return writeErr
 			}
@@ -58,9 +55,7 @@ func proxyWithTimeout(dst, src net.Conn, timeout time.Duration) error {
 	}
 }
 
-func handleConnection(
-	src net.Conn, targetAddr string, timeout time.Duration,
-) {
+func handleConnection(src net.Conn, targetAddr string) {
 	defer src.Close()
 
 	dst, err := net.Dial("tcp", targetAddr)
@@ -75,7 +70,7 @@ func handleConnection(
 
 	go func() {
 		defer wg.Done()
-		err := proxyWithTimeout(dst, src, timeout)
+		err := proxy(dst, src)
 		if err != nil {
 			log.Printf(
 				"error: backend %s: failed writing to dst: %s", targetAddr, err,
@@ -86,7 +81,7 @@ func handleConnection(
 
 	go func() {
 		defer wg.Done()
-		err := proxyWithTimeout(src, dst, timeout)
+		err := proxy(src, dst)
 		if err != nil {
 			log.Printf(
 				"error: backend %s: failed writing to src: %s", targetAddr, err,
@@ -231,7 +226,7 @@ func (l *TCPListener) Listen() error {
 				continue
 			}
 
-			go handleConnection(clientConn, backend.Address, time.Second*5)
+			go handleConnection(clientConn, backend.Address)
 		}
 	}
 }
