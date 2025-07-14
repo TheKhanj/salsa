@@ -9,13 +9,17 @@ MAN_FILES = $(ROFF_FILES:doc/%.roff=$(BUILD_DIR)/%)
 MAN_GZ_FILES = $(MAN_FILES:%=%.gz)
 OBJ_FILES = $(SRC_FILES:src/%.c=$(BUILD_DIR)/%.o)
 
+VERSION = $(shell git describe --tags --exact-match || echo -n dev)
+LD_FLAGS = -X 'main.VERSION=$(VERSION)'
 
 all: doc $(BUILD_DIR)/salsa
 
 doc: $(MAN_GZ_FILES)
 
 $(BUILD_DIR)/salsa: $(SRC_FILES)
-	go build -o build/salsa
+	go build \
+		-ldflags "$(LD_FLAGS)" \
+		-o build/salsa
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)

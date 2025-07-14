@@ -10,7 +10,10 @@ import (
 	"syscall"
 )
 
-var PROC_DIR string
+var (
+	VERSION  = "dev"
+	PROC_DIR string
+)
 
 const (
 	DEFAULT_LISTEN string = "0.0.0.0:5743"
@@ -102,6 +105,7 @@ func run() int {
 	listen := flag.String("l", DEFAULT_LISTEN, "listening address")
 	help := flag.Bool("h", false, "show help message")
 	manPage := flag.Bool("help", false, "show man page")
+	version := flag.Bool("v", false, "show version")
 
 	flag.Parse()
 	backends := flag.Args()
@@ -112,6 +116,12 @@ func run() int {
 
 	if *help == true {
 		return showHelpMessage()
+	}
+
+	if *version == true {
+		fmt.Println(VERSION)
+
+		return 0
 	}
 
 	listener := NewTCPListener(
