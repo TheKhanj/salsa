@@ -10,6 +10,11 @@ import (
 	"syscall"
 )
 
+type Listener interface {
+	Listen() error
+	Shutdown()
+}
+
 var (
 	VERSION  = "dev"
 	PROC_DIR string
@@ -21,15 +26,16 @@ const (
 
 func showHelpMessage() int {
 	fmt.Println("NAME")
-	fmt.Println("  salsa - TCP load balancer")
+	fmt.Println("  salsa - TCP/UDP load balancer")
 	fmt.Println()
 	fmt.Println("SYNOPSIS")
-	fmt.Println("  salsa [-l <listening-address>] <backends...>")
+	fmt.Println("  salsa [-u] [-l <listening-address>] <backends...>")
 	fmt.Println()
 	fmt.Println("OPTIONS")
 	flag.PrintDefaults()
 	fmt.Println("EXAMPLES")
-	fmt.Println("  salsa -l :4000 127.0.0.1:3000 127.0.0.1:3001 127.0.0.1:3002")
+	fmt.Println("  salsa -l :4000 127.0.0.1:3000 127.0.0.1:3001")
+	fmt.Println("  salsa -u -l :5000 127.0.0.1:3000 127.0.0.1:3001")
 
 	return 0
 }
@@ -60,7 +66,7 @@ func getBackends(backends []string) []Backend {
 	return ret
 }
 
-func initProcDir(l *TCPListener) error {
+func initProcDir(backends []Backend) error {
 	err := os.MkdirAll(PROC_DIR, 0755)
 	if err != nil {
 		return err
@@ -70,8 +76,8 @@ func initProcDir(l *TCPListener) error {
 		return err
 	}
 
-	for i := range l.Backends {
-		backend := &l.Backends[i]
+	for i := range backends {
+		backend := &backends[i]
 		os.Mkdir(backend.dir, 0755)
 		err = os.WriteFile(
 			backend.dir+"/score",
@@ -86,7 +92,7 @@ func initProcDir(l *TCPListener) error {
 	return nil
 }
 
-func cleanup(l *TCPListener) {
+func cleanup(l Listener) {
 	l.Shutdown()
 	os.RemoveAll(PROC_DIR)
 	os.Exit(0)
@@ -103,6 +109,7 @@ func run() int {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	listen := flag.String("l", DEFAULT_LISTEN, "listening address")
+	udpMode := flag.Bool("u", false, "use UDP mode")
 	help := flag.Bool("h", false, "show help message")
 	manPage := flag.Bool("help", false, "show man page")
 	version := flag.Bool("v", false, "show version")
@@ -124,32 +131,38 @@ func run() int {
 		return 0
 	}
 
-	listener := NewTCPListener(
-		*listen,
-		getBackends(backends),
-	)
+	backendsList := getBackends(backends)
 
-	defer cleanup(&listener)
+	var l Listener
+	if *udpMode {
+		ul := NewUDPListener(*listen, backendsList)
+		l = &ul
+	} else {
+		tl := NewTCPListener(*listen, backendsList)
+		l = &tl
+	}
 
-	err := initProcDir(&listener)
+	defer cleanup(l)
+
+	err := initProcDir(backendsList)
 	if err != nil {
 		log.Println(err)
 		return 2
 	}
 
-	tcpServerStopped := make(chan struct{})
+	serverStopped := make(chan struct{})
 	go func() {
-		err := listener.Listen()
+		err := l.Listen()
 		if err != nil {
 			log.Println(err.Error())
 		}
-		close(tcpServerStopped)
+		close(serverStopped)
 	}()
 
 	select {
 	case <-sigs:
 		return 0
-	case <-tcpServerStopped:
+	case <-serverStopped:
 		return 3
 	}
 }
