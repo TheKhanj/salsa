@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+
+set -e
+
+run() {
+	local log="$1"
+
+	if [ "x$show_log" != x"false" ]; then
+		echo "$log..." >&2
+	fi
+	shift
+	"$@"
+	e=$?
+	if [ "x$show_log" != x"false" ]; then
+	echo "$log done" >&2
+	fi
+
+	return $e
+}
+
+pkgdir="${1:-/}"
+show_log="$2"
+
+run "installing binary" install -Dm755 salsa "$pkgdir/usr/bin/salsa"
+run "installing man page" install -Dm644 salsa.1.gz "$pkgdir/usr/share/man/man1/salsa.1.gz"

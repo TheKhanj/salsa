@@ -1,52 +1,31 @@
-name: Build and Release Salsa
+name: goreleaser
 
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
 
 jobs:
-  build:
-    name: Build Salsa
+  goreleaser:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.24'
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.24"
 
-    - name: Install dependencies
-      run: go mod tidy
+      - name: Build packages
+        run: ./ci/goreleaser/package.sh
 
-    - name: Build project with Make
-      run: make
-
-    - name: Create release tarball
-      run: tar -czvf salsa.tar.gz -C build salsa salsa.1.gz
-
-    - name: Upload tarball as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: salsa-release
-        path: salsa.tar.gz
-
-  release:
-    name: Release Salsa
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Download artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: salsa-release
-
-    - name: Create GitHub Release
-      id: create_release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: salsa.tar.gz
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
